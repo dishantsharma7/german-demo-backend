@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import connectDB from "./config/db";
 import userRoutes from "./routes/user.routes";
 import serviceRoutes from "./routes/service.routes";
+import zoomSessionRoutes from "./routes/zoomSession.routes";
+import bookingRoutes from "./routes/booking.routes";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -16,6 +18,8 @@ app.use(cookieParser());
 
 app.use("/api/users", userRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/zoom-sessions", zoomSessionRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 const PORT = process.env.PORT || 5010;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
