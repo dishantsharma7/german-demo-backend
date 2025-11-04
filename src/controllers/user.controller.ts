@@ -67,25 +67,23 @@ export const getUserById = async (
     const { id } = req.params;
 
     // Validate ObjectId
-    if (id) {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        res
-          .status(400)
-          .json({ success: false, message: "Invalid user ID format" });
-        return;
-      }
-
-      const user = await UserModel.findById(id)
-        .select("-password")
-        .populate("serviceId");
-
-      if (!user) {
-        res.status(404).json({ success: false, message: "User not found" });
-        return;
-      }
-
-      res.status(200).json({ success: true, user });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID format" });
+      return;
     }
+
+    const user = await UserModel.findById(id)
+      .select("-password")
+      .populate("serviceId");
+
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, user });
   } catch (error: any) {
     console.error("Get user by ID error:", error);
     res
@@ -112,78 +110,77 @@ export const updateUser = async (
     } = req.body;
 
     // Validate ObjectId
-    if (id) {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID format" });
+      return;
+    }
+
+    // Find user
+    const user = await UserModel.findById(id);
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await UserModel.findOne({ email });
+      if (existingUser) {
         res
-          .status(400)
-          .json({ success: false, message: "Invalid user ID format" });
+          .status(409)
+          .json({ success: false, message: "Email already in use" });
         return;
       }
+      user.email = email;
+    }
 
-      // Find user
-      const user = await UserModel.findById(id);
-      if (!user) {
-        res.status(404).json({ success: false, message: "User not found" });
-        return;
-      }
+    // Update fields
+    if (name) user.name = name;
+    if (contactNumber !== undefined) user.contactNumber = contactNumber;
+    if (profileImage !== undefined) user.profileImage = profileImage;
 
-      // Check if email is being changed and if it's already taken
-      if (email && email !== user.email) {
-        const existingUser = await UserModel.findOne({ email });
-        if (existingUser) {
-          res
-            .status(409)
-            .json({ success: false, message: "Email already in use" });
+    // Handle role change
+    if (role && Object.values(UserRole).includes(role)) {
+      user.role = role;
+
+      // Handle serviceId based on role
+      if (role === UserRole.SUBADMIN) {
+        if (!serviceId) {
+          res.status(400).json({
+            success: false,
+            message: "ServiceId is required for sub-admins",
+          });
           return;
         }
-        user.email = email;
-      }
-
-      // Update fields
-      if (name) user.name = name;
-      if (contactNumber !== undefined) user.contactNumber = contactNumber;
-      if (profileImage !== undefined) user.profileImage = profileImage;
-
-      // Handle role change
-      if (role && Object.values(UserRole).includes(role)) {
-        user.role = role;
-
-        // Handle serviceId based on role
-        if (role === UserRole.SUBADMIN) {
-          if (!serviceId) {
-            res.status(400).json({
-              success: false,
-              message: "ServiceId is required for sub-admins",
-            });
-            return;
-          }
-          user.serviceId = serviceId;
-        }
-        //  else {
-        //   user.serviceId = undefined;
-        // }
-      } else if (serviceId && user.role === UserRole.SUBADMIN) {
         user.serviceId = serviceId;
       }
-
-      // Update password if provided
-      if (password) {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-      }
-
-      await user.save();
-
-      const updatedUser = await UserModel.findById(id)
-        .select("-password")
-        .populate("serviceId");
-
-      res.status(200).json({
-        success: true,
-        message: "User updated successfully",
-        user: updatedUser,
-      });
+      //  else {
+      //   user.serviceId = undefined;
+      // }
+    } else if (serviceId && user.role === UserRole.SUBADMIN) {
+      user.serviceId = serviceId;
     }
+
+    // Update password if provided
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    await user.save();
+
+    const updatedUser = await UserModel.findById(id)
+      .select("-password")
+      .populate("serviceId");
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error: any) {
     console.error("Update user error:", error);
     res
@@ -201,13 +198,12 @@ export const deleteUser = async (
     const { id } = req.params;
 
     // Validate ObjectId
-    if (id)
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        res
-          .status(400)
-          .json({ success: false, message: "Invalid user ID format" });
-        return;
-      }
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID format" });
+      return;
+    }
 
     // Prevent users from deleting themselves
     const currentUserId = (req as any).userId;
