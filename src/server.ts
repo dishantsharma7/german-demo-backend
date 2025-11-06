@@ -6,6 +6,7 @@ import userRoutes from "./routes/user.routes";
 import serviceRoutes from "./routes/service.routes";
 import zoomSessionRoutes from "./routes/zoomSession.routes";
 import bookingRoutes from "./routes/booking.routes";
+import webhookRoutes from "./routes/webhook.routes";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -15,6 +16,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
+
+// Webhook routes (must be before other routes to handle raw body if needed)
+app.use("/api", webhookRoutes);
 
 app.use("/api/users", userRoutes);
 app.use("/api/services", serviceRoutes);
