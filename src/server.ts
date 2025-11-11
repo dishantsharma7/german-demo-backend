@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db";
+import { verifyEmailConfig } from "./utils/emailService";
 import userRoutes from "./routes/user.routes";
 import serviceRoutes from "./routes/service.routes";
 import zoomSessionRoutes from "./routes/zoomSession.routes";
@@ -11,6 +12,13 @@ import cookieParser from "cookie-parser";
 
 dotenv.config();
 connectDB();
+
+// Verify email configuration (non-blocking)
+verifyEmailConfig().catch(() => {
+  console.warn(
+    "⚠️  Email service not configured. Email functionality will be disabled."
+  );
+});
 
 const app = express();
 app.use(cors());

@@ -8,22 +8,43 @@ export const createService = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, description, basePrice, duration, isActive } = req.body;
+    const {
+      name,
+      description,
+      serviceFee,
+      consultationFee,
+      duration,
+      isActive,
+    } = req.body;
 
     // Validation
-    if (!name || !basePrice || !duration) {
+    if (
+      !name ||
+      serviceFee === undefined ||
+      consultationFee === undefined ||
+      !duration
+    ) {
       res.status(400).json({
         success: false,
-        message: "Name, basePrice, and duration are required fields",
+        message:
+          "Name, serviceFee, consultationFee, and duration are required fields",
       });
       return;
     }
 
     // Validate numeric fields
-    if (typeof basePrice !== "number" || basePrice < 0) {
+    if (typeof serviceFee !== "number" || serviceFee < 0) {
       res.status(400).json({
         success: false,
-        message: "basePrice must be a positive number",
+        message: "serviceFee must be a positive number",
+      });
+      return;
+    }
+
+    if (typeof consultationFee !== "number" || consultationFee < 0) {
+      res.status(400).json({
+        success: false,
+        message: "consultationFee must be a positive number",
       });
       return;
     }
@@ -53,7 +74,8 @@ export const createService = async (
     const service = new ServiceModel({
       name,
       description,
-      basePrice,
+      serviceFee,
+      consultationFee,
       duration,
       isActive: isActive !== undefined ? isActive : true,
     });
@@ -171,7 +193,14 @@ export const updateService = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, description, basePrice, duration, isActive } = req.body;
+    const {
+      name,
+      description,
+      serviceFee,
+      consultationFee,
+      duration,
+      isActive,
+    } = req.body;
 
     // Validate ObjectId
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -190,15 +219,26 @@ export const updateService = async (
     }
 
     // Validate numeric fields if provided
-    if (basePrice !== undefined) {
-      if (typeof basePrice !== "number" || basePrice < 0) {
+    if (serviceFee !== undefined) {
+      if (typeof serviceFee !== "number" || serviceFee < 0) {
         res.status(400).json({
           success: false,
-          message: "basePrice must be a positive number",
+          message: "serviceFee must be a positive number",
         });
         return;
       }
-      service.basePrice = basePrice;
+      service.serviceFee = serviceFee;
+    }
+
+    if (consultationFee !== undefined) {
+      if (typeof consultationFee !== "number" || consultationFee < 0) {
+        res.status(400).json({
+          success: false,
+          message: "consultationFee must be a positive number",
+        });
+        return;
+      }
+      service.consultationFee = consultationFee;
     }
 
     if (duration !== undefined) {

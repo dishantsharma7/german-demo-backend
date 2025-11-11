@@ -10,6 +10,7 @@ import {
 } from "../models/enums";
 import mongoose from "mongoose";
 import zoomService from "../utils/zoomService";
+import { sendHtmlEmail } from "../utils/emailService";
 
 // Create Booking
 export const createBooking = async (
@@ -178,6 +179,8 @@ export const createBooking = async (
 
     await booking.save();
 
+    console.log("CURRENT booking ", booking);
+
     // Automatically create Zoom meeting for the booking
     let zoomSession = null;
     try {
@@ -215,7 +218,7 @@ export const createBooking = async (
           autoRecording: "cloud", // Enable cloud recording to capture recordings and chat
         }
       );
-      console.log("ZOOM CALL TESTING", zoomMeeting);
+      console.log("CURRENT ZOOm TESTING", zoomMeeting);
 
       // Create ZoomSession record
       zoomSession = new ZoomSessionModel({
@@ -270,6 +273,90 @@ export const createBooking = async (
         startTime: zoomSession.startTime,
         status: zoomSession.status,
       };
+    }
+
+    const zoomJoinLink =
+      zoomSession?.joinUrl || booking.zoomLink || zoomLink || undefined;
+
+    if (zoomJoinLink) {
+      const bookingDateFormatted = dateObj.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const startTimeFormatted = new Date(timeslot.start).toLocaleString();
+      const endTimeFormatted = new Date(timeslot.end).toLocaleString();
+
+      const userEmailHtml = `
+        <h2>Booking Confirmed</h2>
+        <p>Hi ${user.name},</p>
+        <p>Your booking for <strong>${service.name}</strong> is confirmed.</p>
+        <p><strong>Date:</strong> ${bookingDateFormatted}</p>
+        <p><strong>Time:</strong> ${startTimeFormatted} - ${endTimeFormatted}</p>
+        <p><strong>Zoom Meeting Link:</strong> <a href="${zoomJoinLink}">Join Meeting</a></p>
+        <p>Please join a few minutes before the scheduled time.</p>
+        <p>Best regards,<br/>German Demo Team</p>
+      `.trim();
+
+      const subAdminEmailHtml = `
+        <h2>New Booking Scheduled</h2>
+        <p>Hi ${subAdmin.name},</p>
+        <p>A new booking has been scheduled with <strong>${user.name}</strong> for <strong>${service.name}</strong>.</p>
+        <p><strong>Date:</strong> ${bookingDateFormatted}</p>
+        <p><strong>Time:</strong> ${startTimeFormatted} - ${endTimeFormatted}</p>
+        <p><strong>Zoom Meeting Link:</strong> <a href="${zoomJoinLink}">Join Meeting</a></p>
+        <p>Please be prepared and join a few minutes before the scheduled time.</p>
+        <p>Best regards,<br/>German Demo Team</p>
+      `.trim();
+
+      (async () => {
+        try {
+          if (user.email) {
+            const sentToUser = await sendHtmlEmail(
+              user.email,
+              `Booking Confirmation - ${service.name}`,
+              userEmailHtml
+            );
+
+            if (!sentToUser) {
+              console.error(
+                `❌ Failed to send booking confirmation email to user ${user._id}`
+              );
+            }
+          } else {
+            console.warn(
+              `⚠️  User ${user._id} does not have an email address. Skipping notification.`
+            );
+          }
+
+          if (subAdmin.email) {
+            const sentToSubAdmin = await sendHtmlEmail(
+              subAdmin.email,
+              `New Booking Assigned - ${service.name}`,
+              subAdminEmailHtml
+            );
+
+            if (!sentToSubAdmin) {
+              console.error(
+                `❌ Failed to send booking notification email to sub-admin ${subAdmin._id}`
+              );
+            }
+          } else {
+            console.warn(
+              `⚠️  Sub-admin ${subAdmin._id} does not have an email address. Skipping notification.`
+            );
+          }
+        } catch (emailError) {
+          console.error(
+            `❌ Error while sending booking emails for booking ${booking._id}:`,
+            emailError
+          );
+        }
+      })();
+    } else {
+      console.warn(
+        `⚠️  No Zoom join link available for booking ${booking._id}. Skipping email notifications.`
+      );
     }
 
     res.status(201).json(responseData);
