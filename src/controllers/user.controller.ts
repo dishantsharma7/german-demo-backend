@@ -4,6 +4,90 @@ import { UserModel } from "../models/User";
 import { UserRole } from "../models/enums";
 import mongoose from "mongoose";
 
+// Create User (Admin only - for creating subadmins)
+export const createUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      role,
+      contactNumber,
+      profileImage,
+      serviceId,
+    } = req.body;
+
+    // Validation
+    if (!name || !email || !password || !role) {
+      res.status(400).json({
+        success: false,
+        message: "All required fields must be provided",
+      });
+      return;
+    }
+
+    // Check if user exists
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      res.status(409).json({
+        success: false,
+        message: "User already exists with this email",
+      });
+      return;
+    }
+
+    // Validate role
+    if (!Object.values(UserRole).includes(role)) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid role provided" });
+      return;
+    }
+
+    // Check serviceId for subadmin
+    if (role === UserRole.SUBADMIN && !serviceId) {
+      res.status(400).json({
+        success: false,
+        message: "ServiceId is required for sub-admins",
+      });
+      return;
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = await UserModel.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      contactNumber,
+      profileImage,
+      ...(role === UserRole.SUBADMIN && { serviceId }),
+    });
+
+    const createdUser = await UserModel.findById(user._id)
+      .select("-password")
+      .populate("serviceId");
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: createdUser,
+    });
+  } catch (error: any) {
+    console.error("Create user error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
 // Get All Users (with pagination and filtering)
 export const getAllUsers = async (
   req: Request,

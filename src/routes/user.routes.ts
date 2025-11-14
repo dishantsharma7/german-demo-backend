@@ -4,15 +4,21 @@ import {
   login,
   logout,
   getCurrentUser,
+  updateCurrentUserProfile,
+  getCurrentUserResume,
+  serveCurrentUserResume,
+  uploadProfileImage,
 } from "../controllers/user.auth.controller";
 import { authenticate, authorize } from "../middlewares/userAuth";
 import { UserRole } from "../models/enums";
 import {
+  createUser,
   deleteUser,
   getAllUsers,
   getUserById,
   updateUser,
 } from "../controllers/user.controller";
+import { uploadProfileImage as uploadMiddleware } from "../middlewares/upload";
 
 const router = Router();
 
@@ -23,8 +29,25 @@ router.post("/auth/login", login);
 // Protected routes
 router.post("/auth/logout", authenticate, logout);
 router.get("/auth/me", authenticate, getCurrentUser);
+router.put("/auth/profile", authenticate, updateCurrentUserProfile);
+router.post(
+  "/auth/profile-image",
+  authenticate,
+  uploadMiddleware,
+  uploadProfileImage
+);
+router.get("/auth/resume", authenticate, getCurrentUserResume);
+router.get("/auth/resume/file", authenticate, serveCurrentUserResume);
 
 router.get("/users", authenticate, authorize(UserRole.SUPERADMIN), getAllUsers);
+
+// Create user (Admin only - for creating subadmins)
+router.post(
+  "/users",
+  authenticate,
+  authorize(UserRole.SUPERADMIN),
+  createUser
+);
 
 // Get user by ID (Admin only)
 router.get(

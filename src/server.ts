@@ -8,6 +8,7 @@ import serviceRoutes from "./routes/service.routes";
 import zoomSessionRoutes from "./routes/zoomSession.routes";
 import bookingRoutes from "./routes/booking.routes";
 import webhookRoutes from "./routes/webhook.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -19,9 +20,14 @@ verifyEmailConfig().catch(() => {
     "⚠️  Email service not configured. Email functionality will be disabled."
   );
 });
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true, // Allow cookies to be sent
+  optionsSuccessStatus: 200
+};
 
 const app = express();
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -32,6 +38,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/zoom-sessions", zoomSessionRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 const PORT = process.env.PORT || 5010;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
