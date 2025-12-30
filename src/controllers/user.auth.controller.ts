@@ -319,8 +319,15 @@ export const updateCurrentUserProfile = async (
 
     await user.save();
 
-    // Generate PDF resume
-    const pdfBuffer = await generateResumePDF(user);
+    // Reload user from database to ensure we have the latest data for PDF generation
+    const updatedUserForPDF = await UserModel.findById(userId);
+    if (!updatedUserForPDF) {
+      res.status(404).json({ success: false, message: "User not found after update" });
+      return;
+    }
+
+    // Generate PDF resume with the latest user data
+    const pdfBuffer = await generateResumePDF(updatedUserForPDF);
     
     // Upload PDF to Cloudinary
     let pdfUrl: string;

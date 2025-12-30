@@ -40,5 +40,5 @@ app.use("/api/zoom-sessions", zoomSessionRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-const PORT = process.env.PORT || 5010;
+const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
