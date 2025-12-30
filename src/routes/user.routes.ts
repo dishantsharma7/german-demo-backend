@@ -53,7 +53,7 @@ router.post(
 router.get(
   "/users/:id",
   authenticate,
-  authorize(UserRole.SUPERADMIN),
+  authorize(UserRole.SUPERADMIN, UserRole.SUBADMIN),
   getUserById
 );
 
